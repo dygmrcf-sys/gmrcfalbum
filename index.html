@@ -103,7 +103,6 @@
   const APP_URL = 'https://script.google.com/macros/s/AKfycbwx0KUgMfHzDMOcYF5FdMYNBw7X9ckqS6JhfGEfEqsCRnTggtf0_gPbZC-KQUc-BSE0/exec';
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const thumbUrl = id => APP_URL + '?thumb=' + encodeURIComponent(id);
 
   const loader = document.getElementById('loader');
   const content = document.getElementById('content');
@@ -139,10 +138,12 @@
         lastGroup = a.group || null;
         const card = document.createElement('a');
         card.href = a.url; card.target = '_blank'; card.rel = 'noopener';
-        card.className = 'card' + (a.cover ? '' : ' none');
-        const badge = a.cover ? `<span class="count">${a.count} photo${a.count === 1 ? '' : 's'}</span>` : '';
-        const msg = a.cover ? '' : '<div class="empty-msg">FOLDER EMPTY — NO PHOTOS YET</div>';
-        const img = a.cover ? `<img src="${thumbUrl(a.cover)}" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.closest('.card').classList.add('none');this.remove();this.closest('.card').insertAdjacentHTML('afterbegin','<div class=\\'empty-msg\\'>Preview unavailable</div>')">` : '';
+        card.className = 'card' + (a.count > 0 ? '' : ' none');
+        const hasPhotos = a.count > 0;
+        const badge = hasPhotos ? `<span class="count">${a.count} photo${a.count === 1 ? '' : 's'}</span>` : '';
+        const ok = typeof a.cover === 'string' && a.cover.indexOf('data:image') === 0;
+        const msg = ok ? '' : `<div class="empty-msg">${hasPhotos ? 'Preview unavailable' + (a.err ? '<br>' + esc(String(a.err).slice(0, 90)) : '') : 'FOLDER EMPTY — NO PHOTOS YET'}</div>`;
+        const img = ok ? `<img src="${a.cover}" alt="" class="loaded">` : '';
         card.innerHTML = `${img}${msg}${badge}<div class="body"><p class="title">${esc(a.title)}</p><p class="date">${esc(a.dateLabel || '')}</p></div>`;
         grid.appendChild(card);
       });
