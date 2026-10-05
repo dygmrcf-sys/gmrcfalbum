@@ -110,8 +110,10 @@
   const started = Date.now();
   const MIN_SHOW = 900;
 
-  function reveal() {
-    const wait = Math.max(0, MIN_SHOW - (Date.now() - started));
+  let revealed = false;
+  function reveal(fast) {
+    if (revealed) return; revealed = true;
+    const wait = fast ? 150 : Math.max(0, MIN_SHOW - (Date.now() - started));
     setTimeout(() => {
       content.classList.add('ready');
       loader.classList.add('done');
@@ -151,16 +153,35 @@
     });
   }
 
+  const LS_KEY = 'gmAlbumData_v1';
+  let lastSig = '';
+  const sig = d => JSON.stringify(d.months);
+
   function load(force) {
-    hint.textContent = 'Loading albums…';
-    const url = APP_URL + '?api=data' + (force ? '&force=1' : '');
-    fetch(url)
+    const btn = document.getElementById('refresh');
+    let shown = false;
+    // Instant paint from the last visit, then quietly update in the background.
+    if (!force && !lastSig) {
+      try {
+        const c = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+        if (c && c.months) { render(c); lastSig = sig(c); shown = true; reveal(true); }
+      } catch (e) {}
+    }
+    if (force) btn.textContent = '↻ Refreshing…';
+    fetch(APP_URL + '?api=data' + (force ? '&force=1' : ''))
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(data => { render(data); reveal(); })
+      .then(data => {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) {}
+        if (sig(data) !== lastSig) { render(data); lastSig = sig(data); }
+        else document.getElementById('updated').textContent = 'Last scanned: ' + new Date(data.updated).toLocaleString();
+        reveal();
+      })
       .catch(err => {
+        if (shown || revealed) return;
         hint.innerHTML = 'Could not load the album (' + esc(err.message) +
           '). <a href="' + APP_URL + '" target="_blank" rel="noopener">Open directly</a>';
-      });
+      })
+      .finally(() => { btn.textContent = '↻ Refresh'; });
   }
 
   document.getElementById('refresh').addEventListener('click', () => load(true));
