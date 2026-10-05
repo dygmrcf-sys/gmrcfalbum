@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f151b">
+<title>GM Sir Album</title>
+<link rel="preconnect" href="https://script.google.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f151b;--panel-hi:#1d2a36;--line:#26333f;--amber:#e5a33b;--amber-dim:#8a6a35;--text:#eef2f4;--muted:#8fa0ac;--muted-dim:#5c6b76;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+  body{padding-bottom:70px;}
+  a{color:inherit;}
+
+  /* ---------- header ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;padding:16px 3vw;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(229,163,59,.06),transparent 70%),var(--bg);}
+  .top h1{margin:0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(28px,3.6vw,40px);}
+  .right{display:flex;flex-direction:column;align-items:flex-end;}
+  .bar{display:flex;gap:22px;align-items:center;}
+  .stat{display:flex;align-items:baseline;gap:6px;}
+  .stat b{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;color:var(--amber);}
+  .stat span{font-size:11px;color:var(--muted-dim);}
+  button{background:transparent;border:1px solid var(--amber-dim);color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 12px;border-radius:3px;cursor:pointer;}
+  button:hover{background:rgba(229,163,59,.1);}
+  .updated{margin-top:4px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-dim);}
+  @media (max-width:720px){.right{align-items:flex-start;}.updated{text-align:left;}}
+
+  /* ---------- gallery ---------- */
+  .rail{padding:8px 3vw 0;columns:363px;column-gap:32px;}
+  .month{break-inside:avoid;padding:26px 0 8px;}
+  .month-label{display:flex;align-items:baseline;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .month-label .m{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px;line-height:1.05;}
+  .month-label .n{margin-left:auto;font-size:11.5px;color:var(--amber-dim);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(157px,1fr));gap:6px;}
+  .group-tag{grid-column:1/-1;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);padding:8px 0 2px;}
+  .card{position:relative;display:block;aspect-ratio:1/1;overflow:hidden;background:var(--panel-hi);border-radius:3px;text-decoration:none;border:1px solid var(--line);}
+  .card:hover{border-color:var(--amber-dim);}
+  .card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s ease, transform .5s ease;}
+  .card img.loaded{opacity:1;}
+  .card:hover img{transform:scale(1.06);}
+  .card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,21,27,0) 45%,rgba(15,21,27,.92) 100%);pointer-events:none;}
+  .card.none{background:transparent;border:1px dashed var(--line);}
+  .card.none::after{display:none;}
+  .empty-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 10px 50px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted-dim);}
+  .body{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:9px 10px;}
+  .title{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;line-height:1.15;margin:0 0 3px;text-shadow:0 1px 6px rgba(0,0,0,.6);}
+  .card.none .title{color:var(--muted);}
+  .date{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#c9d3da;margin:0;}
+  .count{position:absolute;top:9px;right:9px;z-index:2;background:rgba(15,21,27,.82);border:1px solid var(--line);color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:10px;padding:1px 5px;border-radius:2px;}
+  @media (max-width:720px){.rail{columns:1;}.grid{grid-template-columns:repeat(2,1fr);}}
+
+  /* ---------- loader ---------- */
+  #loader{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:radial-gradient(60% 50% at 50% 42%,rgba(229,163,59,.09),transparent 70%),var(--bg);transition:opacity .7s ease, visibility .7s ease;}
+  #loader.done{opacity:0;visibility:hidden;}
+  .ltitle{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(34px,7vw,56px);color:var(--text);animation:rise .9s ease both;}
+  .stack{position:relative;width:74px;height:74px;animation:rise .9s .1s ease both;}
+  .stack i{position:absolute;inset:0;border-radius:6px;border:1px solid var(--line);background:linear-gradient(135deg,#1d2a36,#141d26);animation:fan 2.2s ease-in-out infinite;}
+  .stack i:nth-child(1){animation-delay:0s;--r:-14deg;--x:-12px;--y:-4px;}
+  .stack i:nth-child(2){animation-delay:.18s;--r:-5deg;--x:-4px;--y:-8px;}
+  .stack i:nth-child(3){animation-delay:.36s;--r:6deg;--x:5px;--y:-8px;}
+  .stack i:nth-child(4){animation-delay:.54s;--r:15deg;--x:13px;--y:-4px;border-color:var(--amber-dim);background:linear-gradient(135deg,#2a2418,#1b1a17);}
+  @keyframes fan{0%,100%{transform:rotate(0) translate(0,0);opacity:.55;}45%{transform:rotate(var(--r,10deg)) translate(var(--x,10px),var(--y,-6px));opacity:1;}}
+  .lbar{width:min(240px,60vw);height:2px;background:var(--line);border-radius:2px;overflow:hidden;animation:rise .9s .2s ease both;}
+  .lbar::after{content:"";display:block;height:100%;width:40%;background:var(--amber);border-radius:2px;animation:slide 1.5s ease-in-out infinite;}
+  @keyframes slide{0%{transform:translateX(-110%);}100%{transform:translateX(280%);}}
+  .hint{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);min-height:18px;text-align:center;padding:0 24px;animation:rise .9s .3s ease both;}
+  .hint a{color:var(--amber);}
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.stack i,.lbar::after,.ltitle,.stack,.lbar,.hint{animation:none;}#loader{transition:none;}}
+
+  #content{opacity:0;transition:opacity .7s ease;}
+  #content.ready{opacity:1;}
+</style>
+</head>
+<body>
+
+  <div id="loader" role="status" aria-live="polite">
+    <div class="ltitle">GM Sir Album</div>
+    <div class="stack" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="lbar" aria-hidden="true"></div>
+    <div class="hint" id="hint">Loading albums…</div>
+  </div>
+
+  <div id="content">
+    <div class="top">
+      <h1>GM Sir Album</h1>
+      <div class="right">
+        <div class="bar">
+          <div class="stat"><b id="sAlbums">–</b><span>ALBUMS</span></div>
+          <div class="stat"><b id="sPhotos">–</b><span>PHOTOS</span></div>
+          <button id="refresh">↻ Refresh</button>
+        </div>
+        <div class="updated" id="updated"></div>
+      </div>
+    </div>
+    <div class="rail" id="rail"></div>
+  </div>
+
+<script>
+  // >>> Your Apps Script web app URL (same deployment, used as a plain JSON + image API)
+  const APP_URL = 'https://script.google.com/macros/s/AKfycbwx0KUgMfHzDMOcYF5FdMYNBw7X9ckqS6JhfGEfEqsCRnTggtf0_gPbZC-KQUc-BSE0/exec';
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const thumbUrl = id => APP_URL + '?thumb=' + encodeURIComponent(id);
+
+  const loader = document.getElementById('loader');
+  const content = document.getElementById('content');
+  const hint = document.getElementById('hint');
+  const started = Date.now();
+  const MIN_SHOW = 900;
+
+  function reveal() {
+    const wait = Math.max(0, MIN_SHOW - (Date.now() - started));
+    setTimeout(() => {
+      content.classList.add('ready');
+      loader.classList.add('done');
+      setTimeout(() => loader.remove(), 900);
+    }, wait);
+  }
+
+  function render(data) {
+    const rail = document.getElementById('rail');
+    rail.innerHTML = '';
+    document.getElementById('sAlbums').textContent = data.totalAlbums;
+    document.getElementById('sPhotos').textContent = data.totalPhotos;
+    document.getElementById('updated').textContent = 'Last scanned: ' + new Date(data.updated).toLocaleString();
+
+    data.months.forEach(m => {
+      const sec = document.createElement('div'); sec.className = 'month';
+      sec.innerHTML = `<div class="month-label"><div class="m">${esc(m.name)}</div><div class="n">${m.albums.length} album${m.albums.length === 1 ? '' : 's'}</div></div>`;
+      const grid = document.createElement('div'); grid.className = 'grid';
+      let lastGroup = null;
+      m.albums.forEach(a => {
+        if (a.group && a.group !== lastGroup) {
+          const t = document.createElement('div'); t.className = 'group-tag'; t.textContent = a.group; grid.appendChild(t);
+        }
+        lastGroup = a.group || null;
+        const card = document.createElement('a');
+        card.href = a.url; card.target = '_blank'; card.rel = 'noopener';
+        card.className = 'card' + (a.cover ? '' : ' none');
+        const badge = a.cover ? `<span class="count">${a.count} photo${a.count === 1 ? '' : 's'}</span>` : '';
+        const msg = a.cover ? '' : '<div class="empty-msg">FOLDER EMPTY — NO PHOTOS YET</div>';
+        const img = a.cover ? `<img src="${thumbUrl(a.cover)}" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.closest('.card').classList.add('none');this.remove();this.closest('.card').insertAdjacentHTML('afterbegin','<div class=\\'empty-msg\\'>Preview unavailable</div>')">` : '';
+        card.innerHTML = `${img}${msg}${badge}<div class="body"><p class="title">${esc(a.title)}</p><p class="date">${esc(a.dateLabel || '')}</p></div>`;
+        grid.appendChild(card);
+      });
+      sec.appendChild(grid); rail.appendChild(sec);
+    });
+  }
+
+  function load(force) {
+    hint.textContent = 'Loading albums…';
+    const url = APP_URL + '?api=data' + (force ? '&force=1' : '');
+    fetch(url)
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => { render(data); reveal(); })
+      .catch(err => {
+        hint.innerHTML = 'Could not load the album (' + esc(err.message) +
+          '). <a href="' + APP_URL + '" target="_blank" rel="noopener">Open directly</a>';
+      });
+  }
+
+  document.getElementById('refresh').addEventListener('click', () => load(true));
+  setTimeout(() => { if (!content.classList.contains('ready')) hint.textContent = 'Scanning the Drive folder — first load can take a few seconds…'; }, 6000);
+  load(false);
+</script>
+</body>
+</html>
